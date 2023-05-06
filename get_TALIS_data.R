@@ -10,6 +10,10 @@ cd <- getwd() # get project directory
 setwd("..") # go to parent directory
 root_dir <- getwd() # save parent directory
 
+# define levels
+levels <- c("a", "b")
+level_labels <- c("primary_schools", "lower_secondary_schools")
+
 # download data
 downloadTALIS(root_dir, # within root_dir, subdirectories TALIS/[year]
               years = 2018, # avail years: 2008, 2013, 2018
@@ -21,20 +25,48 @@ data_dir <- file.path(root_dir, "TALIS", "2018")
 # go back to project dir
 setwd(cd)
 
-# read in downloaded data as edsurvey.data.frame (sdf)
-sdf <- EdSurvey::readTALIS(
-  path = data_dir,
-  countries = "eng", # data for England only
-  dataLevel = "teacher", # allows to analyse teacher and school variables togther
-  isced = "b"
-  # a stands for Primary Level 
-  # b is for Lower Secondary Level
-  # c is for Upper Secondary Level
-)
+# --------------- extract & save TALIS data --------------- #
 
-# print basic information
-sdf
-colnames(sdf)
+for (l in 1:length(levels)) {
+  # read in downloaded data as edsurvey.data.frame (sdf)
+  sdf <- EdSurvey::readTALIS(
+    path = data_dir,
+    countries = "eng", # data for England only
+    dataLevel = "teacher", # allows to analyse teacher and school variables togther
+    isced = levels[l]
+    # a stands for Primary Level 
+    # b is for Lower Secondary Level
+    # c is for Upper Secondary Level
+  )
+  
+  # print basic information
+  sdf
+  colnames(sdf)
+  
+  # ----- Retrieving All Variables in a Dataset ----- #
+  
+  # https://www.air.org/sites/default/files/EdSurvey-getData.pdf
+  
+  # use getData in combination with colnames to read SDF to standard df
+  df <- getData(data = sdf, 
+                varnames = colnames(sdf), 
+                addAttributes = TRUE, # get df that can be used in other functions that usually work on sdf
+                omittedLevels = FALSE, # drop "Omitted Levels"
+                defaultConditions = FALSE
+  )
+  # export as csv file
+  file_name <- paste0("data_talis_2018_eng_", level_labels[l], ".csv")
+  write.csv(df, file_name, row.names = F)
+  
+  # Show codebook
+  View(showCodebook(sdf))
+  codebook <- showCodebook(sdf)
+  file_name <- paste0("codebook_talis_2018_eng_", level_labels[l], ".csv")
+  write.csv(codebook, file_name, row.names = F)
+  
+}
+
+
 
 # ----- useful EdSurvey functions ----- #
 
@@ -43,12 +75,7 @@ colnames(sdf)
 searchSDF("learning", # string to search for in codebook
           sdf, # SDF
           levels = TRUE # return levels in SDF
-          )
-
-# Show codebook
-View(showCodebook(sdf))
-codebook <- showCodebook(sdf)
-write.csv(codebook, "codebook_talis_2018_eng.csv", row.names = F)
+)
 
 # Retrieve the levels and labels of a variable
 levelsSDF(varnames = "tt3g34e", data = sdf)
@@ -60,18 +87,3 @@ summary2(data = sdf,
 
 summary2(data = sdf,
          variable = "t3effpd")
-
-
-# ----- Retrieving All Variables in a Dataset ----- #
-
-# https://www.air.org/sites/default/files/EdSurvey-getData.pdf
-
-# use getData in combination with colnames to read SDF to standard df
-df <- getData(data = sdf, 
-              varnames = colnames(sdf), 
-              addAttributes = TRUE, # get df that can be used in other functions that usually work on sdf
-              omittedLevels = FALSE, # drop "Omitted Levels"
-              defaultConditions = FALSE
-              )
-# export as csv file
-write.csv(df, "data_talis_2018_eng.csv", row.names = F)
